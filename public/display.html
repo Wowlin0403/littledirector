@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分數顯示</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body {
+      height: 100%;
+    }
+
+    .display-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      text-decoration: none;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .sort-toggle {
+      display: flex;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 3px;
+      box-shadow: var(--shadow);
+      gap: 3px;
+    }
+
+    .sort-btn {
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+
+    .sort-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* 長條圖區塊 */
+    .chart-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 0;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .bar-label {
+      width: 60px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: right;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 100%;
+      background: var(--border);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      transition: width 0.4s ease;
+      min-width: 0;
+    }
+
+    .bar-score {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      pointer-events: none;
+    }
+
+    /* 分數序時顯示名次 */
+    .bar-rank {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .bar-rank.medal {
+      border: none;
+      font-size: 18px;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="display-page">
+    <div class="top-bar">
+      <div class="top-left">
+        <a href="index.html" class="back-btn">←</a>
+        <div class="page-title">分數排名</div>
+      </div>
+      <div class="sort-toggle">
+        <button class="sort-btn active" id="btnByGroup" onclick="setSort('group')">組別序</button>
+        <button class="sort-btn" id="btnByScore" onclick="setSort('score')">分數序</button>
+      </div>
+    </div>
+
+    <div class="chart-container" id="chartContainer"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let state = { groupCount: 0, scores: [] };
+    let sortMode = 'group';
+
+    const MEDALS = ['🥇', '🥈', '🥉'];
+
+    function setSort(mode) {
+      sortMode = mode;
+      document.getElementById('btnByGroup').classList.toggle('active', mode === 'group');
+      document.getElementById('btnByScore').classList.toggle('active', mode === 'score');
+      render();
+    }
+
+    function render() {
+      const container = document.getElementById('chartContainer');
+      const items = Array.from({ length: state.groupCount }, (_, i) => ({
+        index: i,
+        score: state.scores[i] ?? 0,
+      }));
+
+      if (sortMode === 'score') {
+        items.sort((a, b) => b.score - a.score);
+      }
+
+      const maxScore = Math.max(...items.map(i => i.score), 1);
+
+      // 計算密集排名（同分同名次，不跳過）
+      if (sortMode === 'score') {
+        let denseRank = 1;
+        items.forEach((item, i) => {
+          if (i === 0) {
+            item.rank = 1;
+          } else {
+            if (item.score < items[i - 1].score) denseRank++;
+            item.rank = denseRank;
+          }
+        });
+      }
+
+      container.innerHTML = items.map((item) => {
+        const pct = maxScore > 0 ? (item.score / maxScore) * 100 : 0;
+        const isMedal = sortMode === 'score' && item.rank <= 3;
+        const rankLabel = sortMode === 'score'
+          ? (isMedal ? MEDALS[item.rank - 1] : item.rank)
+          : '';
+
+        return `
+          <div class="bar-row">
+            ${sortMode === 'score' ? `<div class="bar-rank ${isMedal ? 'medal' : ''}">${rankLabel}</div>` : ''}
+            <div class="bar-label">第 ${item.index + 1} 組</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${pct}%"></div>
+              <div class="bar-score">${item.score}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    socket.on('sync', (newState) => {
+      state = newState;
+      render();
+    });
+  </script>
+</body>
+</html>

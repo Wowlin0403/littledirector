@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活動計分系統</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .home {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 32px 24px;
+      gap: 16px;
+    }
+
+    .home-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+
+    .home-btn {
+      width: 100%;
+      max-width: 320px;
+      padding: 20px;
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .home-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 1px 6px rgba(61, 43, 31, 0.08);
+    }
+
+    .home-btn .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .home-btn.primary .icon {
+      background: var(--primary);
+    }
+
+    /* 設定 Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 32px 24px;
+      width: 90%;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(61, 43, 31, 0.15);
+    }
+
+    .modal h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .modal label {
+      display: block;
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .modal input[type="number"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .btn-confirm {
+      flex: 2;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .group-status {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="home">
+    <div class="home-title">活動計分系統</div>
+
+    <a href="scoring.html" class="home-btn">
+      <div class="icon primary">✏️</div>
+      計分
+    </a>
+
+    <a href="display.html" class="home-btn">
+      <div class="icon">🏆</div>
+      分數顯示
+    </a>
+
+    <button class="home-btn" onclick="openSettings()">
+      <div class="icon">⚙️</div>
+      設定
+    </button>
+
+    <div class="group-status" id="groupStatus"></div>
+  </div>
+
+  <!-- 設定 Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>設定組別數</h2>
+      <label>共幾組？</label>
+      <input type="number" id="groupCountInput" min="1" max="20" value="4">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeSettings()">取消</button>
+        <button class="btn-confirm" onclick="saveSettings()">確認</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('sync', (state) => {
+      document.getElementById('groupStatus').textContent = `目前設定：${state.groupCount} 組`;
+      document.getElementById('groupCountInput').value = state.groupCount;
+    });
+
+    function openSettings() {
+      document.getElementById('settingsModal').classList.add('open');
+      document.getElementById('groupCountInput').focus();
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    function saveSettings() {
+      const val = parseInt(document.getElementById('groupCountInput').value);
+      if (!val || val < 1) return;
+      if (confirm(`確定要將組別數設為 ${val} 組嗎？這將重置所有分數。`)) {
+        socket.emit('set-groups', val);
+        closeSettings();
+      }
+    }
+
+    document.getElementById('settingsModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeSettings();
+    });
+  </script>
+</body>
+</html>

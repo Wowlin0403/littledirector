@@ -1,0 +1,35 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #FFF8F0;
+  --card: #FFFFFF;
+  --primary: #F4845F;
+  --primary-light: #FDE8DF;
+  --text: #3D2B1F;
+  --text-muted: #A0896E;
+  --border: #EDE0D4;
+  --shadow: 0 2px 12px rgba(61, 43, 31, 0.08);
+  --radius: 16px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}

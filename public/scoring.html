@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>計分</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body {
+      height: 100%;
+    }
+
+    .scoring-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 0;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      text-decoration: none;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .score-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .group-label {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .group-select {
+      padding: 6px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .group-select:focus {
+      border-color: var(--primary);
+    }
+
+    .card-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 18px;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .score-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      font-size: 28px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, background 0.1s;
+      flex-shrink: 0;
+    }
+
+    .score-btn:active {
+      transform: scale(0.9);
+    }
+
+    .btn-minus {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .btn-plus {
+      background: var(--primary);
+      color: white;
+    }
+
+    .score-display {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+
+    .score-number {
+      font-size: 72px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+
+    .score-number:active {
+      opacity: 0.6;
+    }
+
+    .score-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* 手動輸入 */
+    .edit-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .edit-overlay.open {
+      display: flex;
+    }
+
+    .edit-sheet {
+      background: var(--card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px 24px 40px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .edit-sheet h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .edit-sheet input[type="number"] {
+      width: 100%;
+      padding: 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 36px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+    }
+
+    .edit-sheet input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn-edit-cancel {
+      flex: 1;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .btn-edit-confirm {
+      flex: 2;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="scoring-page">
+    <div class="top-bar">
+      <a href="index.html" class="back-btn">←</a>
+      <div class="page-title">計分</div>
+    </div>
+    <div class="cards-container" id="cardsContainer"></div>
+  </div>
+
+  <!-- 手動編輯 Sheet -->
+  <div class="edit-overlay" id="editOverlay">
+    <div class="edit-sheet">
+      <h3 id="editTitle">手動設定分數</h3>
+      <input type="number" id="editInput" inputmode="numeric">
+      <div class="edit-actions">
+        <button class="btn-edit-cancel" onclick="closeEdit()">取消</button>
+        <button class="btn-edit-confirm" onclick="confirmEdit()">✓ 確認</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let state = { groupCount: 4, scores: [0, 0, 0, 0] };
+
+    // 每張卡目前選到的組別 index（從 0 開始）
+    // 預設卡片 0 選組 0，卡片 1 選組 1，以此類推
+    const CARD_COUNT = 2;
+    let cardSelections = [0, 1];
+
+    let editingCard = null;
+
+    function renderCards() {
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+
+      for (let c = 0; c < CARD_COUNT; c++) {
+        const sel = Math.min(cardSelections[c], state.groupCount - 1);
+        cardSelections[c] = sel;
+        const score = state.scores[sel] ?? 0;
+
+        const options = Array.from({ length: state.groupCount }, (_, i) =>
+          `<option value="${i}" ${i === sel ? 'selected' : ''}>第 ${i + 1} 組</option>`
+        ).join('');
+
+        const card = document.createElement('div');
+        card.className = 'score-card';
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="group-label">第 ${sel + 1} 組</div>
+            <select class="group-select" data-card="${c}" onchange="changeGroup(this)">
+              ${options}
+            </select>
+          </div>
+          <div class="card-body">
+            <button class="score-btn btn-minus" onclick="addScore(${c}, -1)">−</button>
+            <div class="score-display">
+              <div class="score-number" onclick="openEdit(${c})">${score}</div>
+              <div class="score-hint">點擊數字手動調整</div>
+            </div>
+            <button class="score-btn btn-plus" onclick="addScore(${c}, 1)">+</button>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function changeGroup(select) {
+      const card = parseInt(select.dataset.card);
+      cardSelections[card] = parseInt(select.value);
+      renderCards();
+    }
+
+    function addScore(card, delta) {
+      const index = cardSelections[card];
+      socket.emit('add-score', { index, delta });
+    }
+
+    function openEdit(card) {
+      editingCard = card;
+      const index = cardSelections[card];
+      document.getElementById('editTitle').textContent = `手動設定第 ${index + 1} 組分數`;
+      document.getElementById('editInput').value = state.scores[index];
+      document.getElementById('editOverlay').classList.add('open');
+      setTimeout(() => {
+        const input = document.getElementById('editInput');
+        input.focus();
+        input.select();
+      }, 100);
+    }
+
+    function closeEdit() {
+      document.getElementById('editOverlay').classList.remove('open');
+      editingCard = null;
+    }
+
+    function confirmEdit() {
+      if (editingCard === null) return;
+      const index = cardSelections[editingCard];
+      const value = document.getElementById('editInput').value;
+      socket.emit('set-score', { index, value });
+      closeEdit();
+    }
+
+    document.getElementById('editInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmEdit();
+      if (e.key === 'Escape') closeEdit();
+    });
+
+    document.getElementById('editOverlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeEdit();
+    });
+
+    socket.on('sync', (newState) => {
+      state = newState;
+      renderCards();
+    });
+  </script>
+</body>
+</html>
