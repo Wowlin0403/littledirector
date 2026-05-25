@@ -15,7 +15,8 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
-let state = { groupCount: 4, scores: [0, 0, 0, 0] };
+const DEFAULT_GROUP_COUNT = 4;
+let state = { groupCount: DEFAULT_GROUP_COUNT, scores: Array(DEFAULT_GROUP_COUNT).fill(0) };
 
 async function initDB() {
   await pool.query(`
@@ -52,8 +53,25 @@ io.on('connection', (socket) => {
   socket.emit('sync', state);
 
   socket.on('set-groups', async (count) => {
-    const n = Math.max(1, Math.min(20, parseInt(count) || 4));
-    resetScores(n);
+    const allZero = state.scores.every(s => s === 0);
+    if (!allZero) {
+      socket.emit('error', '目前有組別已有分數，請先重置才能更改組別數。');
+      return;
+    }
+    const n = Math.max(1, Math.min(20, parseInt(count) || DEFAULT_GROUP_COUNT));
+    state.groupCount = n;
+    state.scores = Array(n).fill(0);
+    await saveState();
+    io.emit('sync', state);
+  });
+
+  socket.on('reset', async (password) => {
+    if (password !== '0000') {
+      socket.emit('error', '密碼錯誤');
+      return;
+    }
+    state.groupCount = DEFAULT_GROUP_COUNT;
+    state.scores = Array(DEFAULT_GROUP_COUNT).fill(0);
     await saveState();
     io.emit('sync', state);
   });

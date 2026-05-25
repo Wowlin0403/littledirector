@@ -147,6 +147,95 @@
       font-size: 13px;
       color: var(--text-muted);
     }
+
+    .score-warning {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: #FFF0E8;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--primary);
+      display: none;
+    }
+
+    .score-warning.show {
+      display: block;
+    }
+
+    .btn-confirm:disabled {
+      background: var(--border);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    .reset-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .btn-reset {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: #FFF0E8;
+      color: var(--primary);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .password-row {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .password-row.show {
+      display: flex;
+    }
+
+    .password-row input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 6px;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .password-row input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-reset-confirm {
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .error-msg {
+      font-size: 13px;
+      color: #e74c3c;
+      margin-top: 6px;
+      min-height: 18px;
+    }
   </style>
 </head>
 <body>
@@ -174,12 +263,26 @@
   <!-- 設定 Modal -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
-      <h2>設定組別數</h2>
-      <label>共幾組？</label>
+      <h2>設定</h2>
+
+      <label>組別數</label>
       <input type="number" id="groupCountInput" min="1" max="20" value="4">
+      <div class="score-warning" id="scoreWarning">目前有組別已有分數，請先重置才能更改組別數。</div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeSettings()">取消</button>
-        <button class="btn-confirm" onclick="saveSettings()">確認</button>
+        <button class="btn-confirm" id="btnSaveGroups" onclick="saveSettings()">儲存組別數</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="reset-section">
+        <h3>重置</h3>
+        <button class="btn-reset" onclick="showPasswordRow()">重置所有分數與組別</button>
+        <div class="password-row" id="passwordRow">
+          <input type="password" id="resetPassword" maxlength="4" inputmode="numeric" placeholder="密碼">
+          <button class="btn-reset-confirm" onclick="confirmReset()">確認</button>
+        </div>
+        <div class="error-msg" id="resetError"></div>
       </div>
     </div>
   </div>
@@ -187,15 +290,35 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    let currentState = { groupCount: 4, scores: [] };
 
     socket.on('sync', (state) => {
+      currentState = state;
       document.getElementById('groupStatus').textContent = `目前設定：${state.groupCount} 組`;
       document.getElementById('groupCountInput').value = state.groupCount;
+      updateGroupWarning();
+      // 重置成功時關閉 Modal（密碼列已顯示代表是重置觸發的 sync）
+      if (document.getElementById('passwordRow').classList.contains('show')) {
+        closeSettings();
+      }
     });
 
+    socket.on('error', (msg) => {
+      document.getElementById('resetError').textContent = msg;
+    });
+
+    function updateGroupWarning() {
+      const hasScore = currentState.scores.some(s => s !== 0);
+      document.getElementById('scoreWarning').classList.toggle('show', hasScore);
+      document.getElementById('btnSaveGroups').disabled = hasScore;
+    }
+
     function openSettings() {
+      document.getElementById('passwordRow').classList.remove('show');
+      document.getElementById('resetPassword').value = '';
+      document.getElementById('resetError').textContent = '';
       document.getElementById('settingsModal').classList.add('open');
-      document.getElementById('groupCountInput').focus();
+      updateGroupWarning();
     }
 
     function closeSettings() {
@@ -205,14 +328,27 @@
     function saveSettings() {
       const val = parseInt(document.getElementById('groupCountInput').value);
       if (!val || val < 1) return;
-      if (confirm(`確定要將組別數設為 ${val} 組嗎？這將重置所有分數。`)) {
-        socket.emit('set-groups', val);
-        closeSettings();
-      }
+      socket.emit('set-groups', val);
+      closeSettings();
+    }
+
+    function showPasswordRow() {
+      document.getElementById('passwordRow').classList.add('show');
+      document.getElementById('resetPassword').focus();
+    }
+
+    function confirmReset() {
+      const pw = document.getElementById('resetPassword').value;
+      document.getElementById('resetError').textContent = '';
+      socket.emit('reset', pw);
     }
 
     document.getElementById('settingsModal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeSettings();
+    });
+
+    document.getElementById('resetPassword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmReset();
     });
   </script>
 </body>
