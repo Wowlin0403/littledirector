@@ -74,6 +74,22 @@
       color: white;
     }
 
+    .event-banner {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      padding: 20px 20px;
+      letter-spacing: 1px;
+      flex-shrink: 0;
+      display: none;
+    }
+
+    .event-banner.visible {
+      display: block;
+    }
+
     /* 長條圖區塊 */
     .chart-container {
       flex: 1;
@@ -153,6 +169,7 @@
 </head>
 <body>
   <div class="display-page">
+    <div class="event-banner" id="eventBanner"></div>
     <div class="top-bar">
       <div class="top-left">
         <a href="index.html" class="back-btn">←</a>
@@ -230,6 +247,10 @@
 
     socket.on('sync', (newState) => {
       state = newState;
+      const banner = document.getElementById('eventBanner');
+      const name = newState.eventName || '';
+      banner.textContent = name;
+      banner.classList.toggle('visible', name.length > 0);
       render();
     });
   </script>

@@ -97,6 +97,24 @@
       margin-bottom: 8px;
     }
 
+    .modal input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 20px;
+    }
+
+    .modal input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
     .modal input[type="number"] {
       width: 100%;
       padding: 14px 16px;
@@ -265,6 +283,12 @@
     <div class="modal">
       <h2>設定</h2>
 
+      <label>活動名稱</label>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <input type="text" id="eventNameInput" placeholder="輸入此次活動名稱" style="margin-bottom:0;flex:1;">
+        <button class="btn-confirm" style="flex:none;padding:14px 18px;" onclick="saveEventName()">確認</button>
+      </div>
+
       <label>組別數</label>
       <input type="number" id="groupCountInput" min="1" max="20" value="4">
       <div class="score-warning" id="scoreWarning">目前有組別已有分數，請先重置才能更改組別數。</div>
@@ -296,6 +320,7 @@
       currentState = state;
       document.getElementById('groupStatus').textContent = `目前設定：${state.groupCount} 組`;
       document.getElementById('groupCountInput').value = state.groupCount;
+      document.getElementById('eventNameInput').value = state.eventName || '';
       updateGroupWarning();
       // 重置成功時關閉 Modal（密碼列已顯示代表是重置觸發的 sync）
       if (document.getElementById('passwordRow').classList.contains('show')) {
@@ -323,6 +348,11 @@
 
     function closeSettings() {
       document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    function saveEventName() {
+      const name = document.getElementById('eventNameInput').value;
+      socket.emit('set-event-name', name);
     }
 
     function saveSettings() {
